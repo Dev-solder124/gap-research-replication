@@ -1,21 +1,21 @@
-# Table 4: 15-Quarter Walk-Forward Out-of-Sample Threshold Convergence
+# Table 4: 15-Quarter Walk-Forward OOS Threshold Convergence
 
-Expanding-window walk-forward parameter stability across 15 out-of-sample quarters (Q3 2022 to Q1 2026). Threshold c*(k) is selected on the expanding in-sample window (grid: 0.00% to 5.00%, step 0.05%, min 30 trades) and applied out-of-sample.
+First-crossing breakeven threshold estimator c*(k) across 15 out-of-sample quarters (Q3 2022 to Q1 2026). Estimated via linear interpolation between adjacent 0.25% bins at the 50.0% resolved win-rate barrier on the expanding training window. Both Resolved Win Rate (TARGET / (TARGET + STOP_LOSS)) and Nominal Win Rate (TARGET / ALL) are reported.
 
-| Quarter | In-Sample Trades | Optimal Threshold c*(k) (%) | In-Sample WR (%) | OOS Filtered Trades | OOS Win Rate (%) | Fade-Dominant |
+| Quarter | In-Sample Resolved | Cutoff c*(k) (%) | OOS Filtered Resolved | OOS Filtered Resolved WR (%) | OOS Filtered Nominal WR (%) | Fade-Dominant (>50%) |
 |:---|---:|---:|---:|---:|---:|:---:|
-| Q3 2022 | 47,603 | 3.90% | 62.59% | 60 | 66.67% | Yes |
-| Q4 2022 | 72,072 | 4.75% | 64.24% | 21 | 61.90% | Yes |
-| Q1 2023 | 95,104 | 4.75% | 63.95% | 43 | 67.44% | Yes |
-| Q2 2023 | 118,182 | 4.75% | 64.65% | 27 | 40.74% | No |
-| Q3 2023 | 140,033 | 2.50% | 63.17% | 184 | 57.07% | Yes |
-| Q4 2023 | 163,752 | 2.50% | 62.71% | 195 | 63.08% | Yes |
-| Q1 2024 | 186,669 | 5.00% | 63.25% | 37 | 56.76% | Yes |
-| Q2 2024 | 210,702 | 2.75% | 62.98% | 328 | 62.20% | Yes |
-| Q3 2024 | 234,033 | 2.80% | 62.90% | 208 | 56.25% | Yes |
-| Q4 2024 | 258,401 | 2.80% | 62.37% | 238 | 59.24% | Yes |
-| Q1 2025 | 281,064 | 2.85% | 62.14% | 237 | 61.18% | Yes |
-| Q2 2025 | 304,946 | 2.90% | 62.09% | 358 | 67.60% | Yes |
-| Q3 2025 | 327,228 | 2.90% | 62.72% | 107 | 53.27% | Yes |
-| Q4 2025 | 349,905 | 2.80% | 62.45% | 103 | 62.14% | Yes |
-| Q1 2026 | 371,806 | 2.80% | 62.44% | 436 | 69.50% | Yes |
+| Q3 2022 | 47,603 | 0.617% | 10,492 | 61.02% | 54.71% | Yes |
+| Q4 2022 | 72,072 | 0.567% | 8,848 | 60.58% | 55.00% | Yes |
+| Q1 2023 | 95,104 | 0.508% | 9,610 | 64.61% | 60.19% | Yes |
+| Q2 2023 | 118,182 | 0.446% | 9,695 | 62.25% | 57.91% | Yes |
+| Q3 2023 | 140,033 | 0.401% | 12,974 | 60.34% | 57.43% | Yes |
+| Q4 2023 | 163,752 | 0.387% | 13,790 | 56.87% | 52.83% | Yes |
+| Q1 2024 | 186,669 | 0.391% | 14,670 | 60.42% | 57.56% | Yes |
+| Q2 2024 | 210,702 | 0.385% | 14,692 | 60.23% | 55.91% | Yes |
+| Q3 2024 | 234,033 | 0.378% | 14,936 | 59.55% | 55.66% | Yes |
+| Q4 2024 | 258,401 | 0.374% | 13,157 | 63.09% | 59.57% | Yes |
+| Q1 2025 | 281,064 | 0.369% | 15,347 | 56.50% | 54.27% | Yes |
+| Q2 2025 | 304,946 | 0.375% | 14,153 | 60.95% | 53.86% | Yes |
+| Q3 2025 | 327,228 | 0.376% | 11,759 | 66.12% | 62.54% | Yes |
+| Q4 2025 | 349,905 | 0.366% | 11,109 | 67.59% | 64.42% | Yes |
+| Q1 2026 | 371,806 | 0.355% | 14,440 | 51.77% | 46.52% | Yes |

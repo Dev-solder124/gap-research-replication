@@ -1,5 +1,6 @@
 """
 Test 6: Gap-Size Bin Win-Rate Analysis
+Day-Clustered Linear Probability Models & Resolved vs. Nominal Win Rates
 Manuscript Reference: Table 8, Figure 3, Section 4.4
 """
 
@@ -12,7 +13,7 @@ if BASE_DIR not in sys.path:
 
 import pandas as pd
 import numpy as np
-import scipy.stats as stats
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from src.data_loader import load_trades_clean
 
@@ -24,7 +25,7 @@ def format_stars(p_val):
 
 def run_test_6():
     print("Running Test 6: Gap-Size Bin Win-Rate Analysis (Table 8, Figure 3)...")
-    trades = load_trades_clean(resolved_only=True)
+    trades = load_trades_clean(resolved_only=False)
     
     # 10 fixed bins
     bins = [0.0, 0.25, 0.50, 0.75, 1.00, 1.25, 1.50, 2.00, 2.50, 3.00, np.inf]
@@ -32,48 +33,78 @@ def run_test_6():
               '1.25–1.50', '1.50–2.00', '2.00–2.50', '2.50–3.00', '3.00+']
 
     trades['bin'] = pd.cut(trades['gap_size_pct'], bins=bins, labels=labels, right=False)
-
-    stable = trades[trades['regime'] == 'stable']
-    post = trades[trades['regime'] == 'post_shock']
+    sub_all = trades[trades['regime'].isin(['stable', 'post_shock'])].copy()
+    sub_all['post_shock'] = (sub_all['regime'] == 'post_shock').astype(float)
+    sub_all['win_nominal'] = (sub_all['status'] == 'TARGET').astype(float)
 
     records = []
     plot_data = []
 
     for b in labels:
-        s_sub = stable[stable['bin'] == b]
-        p_sub = post[post['bin'] == b]
+        b_all = sub_all[sub_all['bin'] == b].copy()
+        b_res = b_all[b_all['status'].isin(['TARGET', 'STOP_LOSS'])].copy()
+        b_res['win_resolved'] = (b_res['status'] == 'TARGET').astype(float)
         
-        n_s = len(s_sub)
-        n_p = len(p_sub)
-        w_s = s_sub['is_win'].sum()
-        w_p = p_sub['is_win'].sum()
+        # Trade counts
+        n_stable_total = len(b_all[b_all['regime'] == 'stable'])
+        n_post_total = len(b_all[b_all['regime'] == 'post_shock'])
         
-        wr_s = (w_s / n_s) if n_s > 0 else np.nan
-        wr_p = (w_p / n_p) if n_p > 0 else np.nan
-        diff = (wr_s - wr_p) if (not np.isnan(wr_s) and not np.isnan(wr_p)) else np.nan
+        n_stable_res = len(b_res[b_res['regime'] == 'stable'])
+        n_post_res = len(b_res[b_res['regime'] == 'post_shock'])
         
-        # Pooled two-sample z-test for difference in proportions
-        p_pool = (w_s + w_p) / (n_s + n_p)
-        se_pool = np.sqrt(p_pool * (1.0 - p_pool) * (1.0 / n_s + 1.0 / n_p))
-        z_stat = (wr_s - wr_p) / se_pool
-        p_val = 2.0 * (1.0 - stats.norm.cdf(abs(z_stat)))
-        stars = format_stars(p_val)
+        # Nominal Win Rates
+        nom_wr_stable = b_all[b_all['regime'] == 'stable']['win_nominal'].mean() if n_stable_total > 0 else np.nan
+        nom_wr_post = b_all[b_all['regime'] == 'post_shock']['win_nominal'].mean() if n_post_total > 0 else np.nan
         
+        # Resolved Win Rates
+        res_wr_stable = b_res[b_res['regime'] == 'stable']['win_resolved'].mean() if n_stable_res > 0 else np.nan
+        res_wr_post = b_res[b_res['regime'] == 'post_shock']['win_resolved'].mean() if n_post_res > 0 else np.nan
+        
+        # Day-clustered LPM for Resolved Win Rate:
+        # win_resolved = alpha + beta * post_shock + e, clustered by date
+        X_res = sm.add_constant(b_res['post_shock'])
+        res_model = sm.OLS(b_res['win_resolved'], X_res).fit(cov_type='cluster', cov_kwds={'groups': b_res['date']})
+        diff_res = res_model.params['post_shock']
+        se_res = res_model.bse['post_shock']
+        t_res = res_model.tvalues['post_shock']
+        p_res = res_model.pvalues['post_shock']
+        stars_res = format_stars(p_res)
+        
+        # Day-clustered LPM for Nominal Win Rate:
+        X_nom = sm.add_constant(b_all['post_shock'])
+        nom_model = sm.OLS(b_all['win_nominal'], X_nom).fit(cov_type='cluster', cov_kwds={'groups': b_all['date']})
+        diff_nom = nom_model.params['post_shock']
+        se_nom = nom_model.bse['post_shock']
+        t_nom = nom_model.tvalues['post_shock']
+        p_nom = nom_model.pvalues['post_shock']
+        stars_nom = format_stars(p_nom)
+
         records.append({
             'Gap Size Bin (%)': b,
-            'Stable Trades (N_s)': n_s,
-            'Stable Win Rate (%)': f"{wr_s * 100:.2f}%",
-            'Post-Shock Trades (N_p)': n_p,
-            'Post-Shock Win Rate (%)': f"{wr_p * 100:.2f}%",
-            'Difference (pp)': f"{diff * 100:.2f}%",
-            'z-Statistic': f"{z_stat:.2f}{stars}",
-            'p-value': f"{p_val:.4f}" if p_val >= 0.0001 else "< 0.0001"
+            'Stable Total N': n_stable_total,
+            'Stable Resolved N': n_stable_res,
+            'Post Total N': n_post_total,
+            'Post Resolved N': n_post_res,
+            'Stable Resolved WR (%)': f"{res_wr_stable * 100:.2f}%",
+            'Post Resolved WR (%)': f"{res_wr_post * 100:.2f}%",
+            'Resolved Diff (pp)': f"{diff_res * 100:.2f}%{stars_res}",
+            'Resolved Day-Clustered SE': f"{se_res * 100:.2f}%",
+            'Resolved t-Stat': f"{t_res:.2f}",
+            'Resolved p-value': f"{p_res:.4f}" if p_res >= 0.0001 else "< 0.0001",
+            'Stable Nominal WR (%)': f"{nom_wr_stable * 100:.2f}%",
+            'Post Nominal WR (%)': f"{nom_wr_post * 100:.2f}%",
+            'Nominal Diff (pp)': f"{diff_nom * 100:.2f}%{stars_nom}",
+            'Nominal Day-Clustered SE': f"{se_nom * 100:.2f}%",
+            'Nominal t-Stat': f"{t_nom:.2f}",
+            'Nominal p-value': f"{p_nom:.4f}" if p_nom >= 0.0001 else "< 0.0001"
         })
-        
+
         plot_data.append({
             'bin': b,
-            'wr_s': wr_s * 100,
-            'wr_p': wr_p * 100
+            'res_s': res_wr_stable * 100.0,
+            'res_p': res_wr_post * 100.0,
+            'nom_s': nom_wr_stable * 100.0,
+            'nom_p': nom_wr_post * 100.0
         })
 
     df_table8 = pd.DataFrame(records)
@@ -90,18 +121,19 @@ def run_test_6():
     md_lines = [
         "# Table 8: Gap-Size Bin Win-Rate Analysis and Structural Comparison",
         "",
-        "Win rates by 10 fixed gap-size bins comparing Stable (2022-03-01 to 2026-02-28) and Post-Shock (≥ 2026-03-01) regimes. "
-        "Two-sample pooled z-test evaluates the null hypothesis of equal win-rate proportions between regimes. "
+        "Win rates across 10 fixed gap-size bins comparing Stable (2022-03-01 to 2026-02-28) and Post-Shock (≥ 2026-03-01) regimes. "
+        "Differences are evaluated via day-clustered Linear Probability Models (LPM) clustering by trading session date to account for cross-sectional dependence. "
+        "Both Resolved Win Rate (TARGET / (TARGET + STOP_LOSS)) and Nominal Win Rate (TARGET / ALL) are reported. "
         "Significance: * p < 0.10, ** p < 0.05, *** p < 0.01.",
         "",
-        "| Gap Size Bin (%) | Stable Trades (N_s) | Stable Win Rate (%) | Post-Shock Trades (N_p) | Post-Shock Win Rate (%) | Difference (pp) | z-Statistic | p-value |",
-        "|:---|---:|---:|---:|---:|---:|---:|:---:|"
+        "| Gap Size Bin (%) | Stable Resolved WR | Post Resolved WR | Resolved Diff (Day-Clustered SE) | Resolved t-Stat (p-val) | Stable Nominal WR | Post Nominal WR | Nominal Diff (Day-Clustered SE) |",
+        "|:---|---:|---:|---:|---:|---:|---:|---:|"
     ]
     for _, r in df_table8.iterrows():
         md_lines.append(
-            f"| {r['Gap Size Bin (%)']} | {r['Stable Trades (N_s)']:,} | {r['Stable Win Rate (%)']} | "
-            f"{r['Post-Shock Trades (N_p)']:,} | {r['Post-Shock Win Rate (%)']} | {r['Difference (pp)']} | "
-            f"{r['z-Statistic']} | {r['p-value']} |"
+            f"| {r['Gap Size Bin (%)']} | {r['Stable Resolved WR (%)']} | {r['Post Resolved WR (%)']} | "
+            f"{r['Resolved Diff (pp)']} ({r['Resolved Day-Clustered SE']}) | {r['Resolved t-Stat']} ({r['Resolved p-value']}) | "
+            f"{r['Stable Nominal WR (%)']} | {r['Post Nominal WR (%)']} | {r['Nominal Diff (pp)']} ({r['Nominal Day-Clustered SE']}) |"
         )
     md_lines.append("")
     
@@ -109,7 +141,7 @@ def run_test_6():
         f.write('\n'.join(md_lines))
     print(f"Table 8 saved to {csv_path} and {md_path}")
 
-    # --- Plot Figure 3: Side-by-Side Bar Chart ---
+    # Plot Figure 3: Side-by-Side Bar Chart for Resolved Win Rates
     df_plot = pd.DataFrame(plot_data)
     fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_03_gap_size_bins.png')
     
@@ -119,13 +151,12 @@ def run_test_6():
     x = np.arange(len(df_plot))
     width = 0.38
     
-    plt.bar(x - width/2, df_plot['wr_s'], width, label='Stable Regime (2022–2026)', color='#1f77b4', alpha=0.9, edgecolor='none')
-    plt.bar(x + width/2, df_plot['wr_p'], width, label='Post-Shock Regime (2026)', color='#d62728', alpha=0.9, edgecolor='none')
+    plt.bar(x - width/2, df_plot['res_s'], width, label='Stable Regime: Resolved WR', color='#1f77b4', alpha=0.9)
+    plt.bar(x + width/2, df_plot['res_p'], width, label='Post-Shock Regime: Resolved WR', color='#d62728', alpha=0.9)
     
-    # 50% breakeven reference line
-    plt.axhline(y=50.0, color='#555555', linestyle='--', linewidth=1.2, alpha=0.7, label='Breakeven Win Rate (50%)')
+    plt.axhline(y=50.0, color='#555555', linestyle='--', linewidth=1.2, alpha=0.7, label='50% Breakeven Barrier')
     
-    plt.title('Figure 3: Resolved Trade Win Rate by Gap-Size Bin Across Regimes', fontsize=13, fontweight='bold', pad=12)
+    plt.title('Figure 3: Resolved Win Rate by Gap-Size Bin Across Regimes (Day-Clustered Inference)', fontsize=13, fontweight='bold', pad=12)
     plt.xlabel('Overnight Gap Size Range (% of Entry Price)', fontsize=11, labelpad=8)
     plt.ylabel('Resolved Win Rate (%)', fontsize=11, labelpad=8)
     plt.xticks(x, df_plot['bin'], rotation=30, ha='right', fontsize=9)
@@ -141,4 +172,3 @@ def run_test_6():
 
 if __name__ == '__main__':
     run_test_6()
-

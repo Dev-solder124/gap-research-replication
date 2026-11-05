@@ -104,8 +104,9 @@ def run_test_10():
         ('Model 1', ['post_shock']),
         ('Model 2', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500']),
         ('Model 3', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover']),
-        ('Model 4', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover', 'fii_net', 'mean_bar0_range', 'sweet_spot_share']),
-        ('Model 5', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover', 'fii_net', 'mean_bar0_range', 'sweet_spot_share', 'sigma_brent_20d', 'abs_R_brent'])
+        ('Model 4', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover', 'mean_bar0_range', 'sweet_spot_share']),
+        ('Model 5', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover', 'mean_bar0_range', 'sweet_spot_share', 'sigma_brent_20d', 'abs_R_brent']),
+        ('Model 6', ['post_shock', 'vix', 'R_nifty500', 'abs_R_nifty500', 'usd_inr_chg', 'ln_turnover', 'mean_bar0_range', 'sweet_spot_share', 'sigma_brent_20d', 'abs_R_brent', 'fii_net'])
     ]
 
     all_variables = [
@@ -116,11 +117,11 @@ def run_test_10():
         ('abs_R_nifty500', '|Nifty 500 Return|'),
         ('usd_inr_chg', 'Δ USD/INR'),
         ('ln_turnover', 'ln(NSE Turnover)'),
-        ('fii_net', 'FII Net Flow (Rs Cr)'),
         ('mean_bar0_range', 'Mean Opening Bar Range'),
         ('sweet_spot_share', 'Sweet Spot Share'),
         ('sigma_brent_20d', 'Brent 20d Volatility'),
-        ('abs_R_brent', '|Brent Return|')
+        ('abs_R_brent', '|Brent Return|'),
+        ('fii_net', 'FII Net Flow (Rs Cr)')
     ]
 
     model_results = {}
@@ -178,15 +179,16 @@ def run_test_10():
         "# Table 12: Macro Horse Race — Sequential WLS Models",
         "",
         "Sequential Weighted Least Squares (WLS) regressions of daily resolved win rate (WR_t). "
+        "Models 1–5 cover the full 2022–2026 sample; Model 6 evaluates the 2025–2026 sub-sample with direct FII net flows. "
         "Weights: daily resolved trade count (n_resolved). Standard errors: Newey-West HAC (lag = 5) reported in parentheses. "
         "Significance: * p < 0.10, ** p < 0.05, *** p < 0.01.",
         "",
-        "| Variable | Model 1 | Model 2 | Model 3 | Model 4 | Model 5 |",
-        "|:---|---:|---:|---:|---:|---:|"
+        "| Variable | Model 1 | Model 2 | Model 3 | Model 4 | Model 5 | Model 6 |",
+        "|:---|---:|---:|---:|---:|---:|---:|"
     ]
     for _, r in df_table12.iterrows():
         md_lines.append(
-            f"| {r['Variable']} | {r['Model 1']} | {r['Model 2']} | {r['Model 3']} | {r['Model 4']} | {r['Model 5']} |"
+            f"| {r['Variable']} | {r['Model 1']} | {r['Model 2']} | {r['Model 3']} | {r['Model 4']} | {r['Model 5']} | {r['Model 6']} |"
         )
     md_lines.append("")
     
@@ -198,7 +200,7 @@ def run_test_10():
     df_fig8 = pd.DataFrame(fig8_data)
     fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_08_macro_horse_race_coefficients.png')
     
-    plt.figure(figsize=(9, 5), dpi=300)
+    plt.figure(figsize=(10, 5), dpi=300)
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
     
     x = np.arange(len(df_fig8))

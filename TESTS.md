@@ -60,22 +60,35 @@ For each of Pre-stable, Stable, Post-shock, and Full Sample:
 
 **Cleaning steps:**
 1. Apply Muhurat purge.
-2. Use resolved trades only (`status IN ('TARGET', 'STOP_LOSS')`).
+2. Load all trades, tracking both Nominal Win Rate (`status == 'TARGET'` over all trades) and Resolved Win Rate (`status == 'TARGET'` over resolved trades).
 
 **Algorithm — expanding-window walk-forward with quarterly OOS:**
 
 The sample is partitioned into 15 out-of-sample (OOS) quarters, each of approximately 60–65 trading days. The walk-forward proceeds as follows:
 
 For OOS quarter k (k = 1 to 15):
-1. **Training window**: all resolved trades from the start of the full sample through the last day before OOS quarter k begins.
-2. **Threshold estimation on training window**: For each candidate gap-size threshold c ∈ {0.00, 0.05, 0.10, …, 5.00} (percent, 101 candidates), compute the win rate among all resolved trades with `gap_size_pct ≥ c` and at least `min_trades = 30` resolved trades meeting the filter. The estimated threshold c*(k) is the smallest c such that the filtered win rate is maximized and the minimum-trade requirement is met. If multiple c values produce the same maximum win rate, choose the smallest. If no c satisfies `min_trades = 30`, record as missing.
-3. **OOS evaluation**: Apply the estimated threshold c*(k) to resolved trades in OOS quarter k (i.e., use only trades with `gap_size_pct ≥ c*(k)`). Compute the OOS resolved win rate and the fraction of OOS trades classified as "fade-dominant" (win rate > 50%).
+1. **Training window**: all trades from the start of the full sample through the last day before OOS quarter k begins.
+2. **Threshold estimation on training window (First-Crossing Breakeven Cutoff)**:
+   - Per methodology, the threshold estimator c*(k) is defined as the non-parametric first-crossing cutoff of the 50.0% directional breakeven barrier, not an unconstrained tail argmax.
+   - Partition training window trades with 0.0 ≤ gap_size_pct ≤ 5.0 into 20 equal-width bins over [0.0, 5.0] using 21 bin edges (`np.linspace(0.0, 5.0, 21)`, width = 0.25%, midpoints m_j = 0.125%, 0.375%, ..., 4.875%).
+   - For each bin j, compute the bin win rate wr_j and trade count n_j. Retain only valid bins with n_j ≥ 30.
+   - Scan left-to-right from the smallest bin midpoint (j = 0, 1, ...). Identify the first adjacent pair of valid bins (j, j+1) where wr_j < 0.50 and wr_{j+1} ≥ 0.50.
+   - Compute threshold c*(k) via linear interpolation between (m_j, wr_j) and (m_{j+1}, wr_{j+1}) at wr = 0.50:
 
-**Gap size in percent**: The raw `gap_size` column is in rupees. Convert to percent using `gap_size / entry_price × 100` as the working approximation, or source from zone labels if a cleaner percentage is derivable.
+$$
+c^*(k) = m_j + \frac{0.50 - wr_j}{wr_{j+1} - wr_j} \cdot (m_{j+1} - m_j)
+$$
 
-**What to report (Table 4):** For each of the 15 OOS quarters — the OOS quarter label (e.g., Q1 2022, Q2 2022 …), the estimated threshold c*(k), the OOS resolved win rate, and the fade-dominant indicator.
+   - If the first valid bin already has wr_0 ≥ 0.50, set c*(k) = m_0. If no bin crosses 0.50, record c*(k) as missing (NaN).
+3. **OOS evaluation**:
+   - Apply filter `gap_size_pct ≥ c*(k)` to trades in OOS quarter k.
+   - Report unfiltered OOS win rate, filtered OOS win rate, filtered trade count, and whether the filtered OOS win rate exceeds 50.0% (for both Nominal and Resolved win rates).
 
-**What to report (Figure 2):** A time-series line chart of c*(k) over the 15 OOS quarters, showing threshold stability or drift.
+**Gap size in percent**: Compute `gap_size_pct = gap_size / entry_price × 100`.
+
+**What to report (Table 4):** For each of the 15 OOS quarters — the OOS quarter label (e.g., Q3 2022, Q4 2022 … Q1 2026), the estimated threshold c*(k), unfiltered and filtered trade counts, unfiltered and filtered win rates (both Nominal and Resolved), and the fade-dominant breakeven indicators.
+
+**What to report (Figure 2):** A time-series line chart of c*(k) over the 15 OOS quarters, demonstrating threshold stability and convergence.
 
 ---
 
@@ -198,7 +211,7 @@ where:
 
 **Cleaning steps:**
 1. Apply Muhurat purge.
-2. Use resolved trades only (`status IN ('TARGET', 'STOP_LOSS')`).
+2. Load all trades, retaining status indicators for `TARGET`, `STOP_LOSS`, and `TIME_EXIT`.
 3. Compute gap size as a percentage: `gap_size_pct = gap_size / entry_price × 100`.
 
 **Bin definitions (10 fixed bins):**
@@ -219,20 +232,23 @@ where:
 Use `pandas.cut` or equivalent with these exact boundaries and right=False (left-closed, right-open) except the final bin which is open on the right.
 
 **Within each bin, separately for Stable and Post-Shock regimes:**
-- Count resolved trades (N_stable and N_post)
-- Count winning trades (n_wins)
-- Compute win rate: wins / resolved
+- Compute **Resolved Win Rate**: TARGET / (TARGET + STOP_LOSS)
+- Compute **Nominal Win Rate**: TARGET / (TARGET + STOP_LOSS + TIME_EXIT)
+- Track trade counts for resolved trades and all trades.
 
-**Statistical test per bin:**
-Two-sample z-test for the difference in proportions between Stable and Post-Shock win rates:
+**Statistical inference per bin (Day-Clustered Linear Probability Model):**
+To account for cross-sectional dependence across stocks executing trades on the same calendar trading day, replace unclustered tests with a day-clustered Linear Probability Model (LPM) within each bin across the Stable and Post-Shock regimes:
 
 $$
-z = \frac{\hat{p}_{\text{stable}} - \hat{p}_{\text{post}}}{\sqrt{\hat{p}(1-\hat{p})\left(\frac{1}{N_{\text{stable}}} + \frac{1}{N_{\text{post}}}\right)}}
+win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \varepsilon_{i,t}
 $$
 
-where the pooled proportion $\hat{p} = (n_{\text{wins,stable}} + n_{\text{wins,post}}) / (N_{\text{stable}} + N_{\text{post}})$.
+Estimate via OLS with standard errors clustered on trading day `date` (`cov_type='cluster', cov_kwds={'groups': date}`).
+Estimate this model separately for:
+1. **Resolved trades**: `win = 1` if `TARGET`, `0` if `STOP_LOSS`.
+2. **All trades (Nominal)**: `win = 1` if `TARGET`, `0` if `STOP_LOSS` or `TIME_EXIT`.
 
-**What to report (Table 8):** For each bin — N_stable, win rate in Stable, N_post, win rate in Post-shock, and the z-statistic with significance stars at conventional levels.
+**What to report (Table 8):** For each of the 10 bins — Stable and Post-Shock sample sizes, Stable and Post-Shock win rates for both Resolved and Nominal definitions, day-clustered differences (Δ), day-clustered standard errors, t-statistics, and two-sided p-values.
 
 **What to report (Figure 3):** Bar chart of win rates by bin, with Stable and Post-shock plotted side by side.
 
@@ -299,7 +315,7 @@ $$
 
 ---
 
-## Test 8: Sector Difference-in-Differences — 4 Specifications
+## Test 8: Sector Difference-in-Differences — Energy Exposure Specifications
 
 **Manuscript reference:** Table 10, Figure 5, Section 4.6
 
@@ -310,57 +326,60 @@ $$
 
 **Cleaning steps:**
 1. Apply Muhurat purge.
-2. Use resolved trades only.
+2. Use resolved trades only (`status IN ('TARGET', 'STOP_LOSS')`).
 3. Merge sector labels from `SECTOR_MAP.py` onto the trade panel using the ticker root (strip the `_1M` suffix from `symbol`).
-4. Define two sector groups from sector labels (researcher's classification decision based on SECTOR_MAP sectors):
-   - **Downstream** (oil-price sensitive): Oil & Gas, Paints, Chemicals, Transportation
-   - **Defensive** (oil-price insensitive): FMCG, Healthcare, Pharma, IT
+4. Define three mutually exclusive industry groups from `SECTOR_MAP.py`:
+   - **Downstream Consumers** (energy/petrochemical input cost sensitive): `{'Auto', 'Automobile', 'Cement', 'Cement & Cement Products', 'Chemicals', 'Power', 'Fertilisers', 'Fertilisers & Pesticides'}`
+   - **Upstream Producers** (crude/commodity revenue beneficiaries): `{'Oil & Gas', 'Metals'}`
+   - **Clean Defensives** (energy price insensitive): `{'FMCG', 'Consumer Goods', 'Healthcare', 'Healthcare Services', 'Pharma', 'IT'}`
 
-**Specification 1A — Downstream vs Defensives, Acute March 2026:**
+**Specification 1A — Downstream Consumers vs. Clean Defensives (Acute March 2026):**
 
 $$
 win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{Downstream}_i + \beta_3 \cdot (\text{PostShock}_t \times \text{Downstream}_i) + \varepsilon_{i,t}
 $$
 
-Sample restriction: Defensive and Downstream stocks only. Post-Shock window: March 2026 only (2026-03-01 to 2026-03-31). Pre-period: Stable regime (2022-03-01 to 2026-02-28).
+Sample restriction: Downstream Consumers and Clean Defensives only. Post-Shock window: Acute March 2026 only (2026-03-01 to 2026-03-31). Pre-period baseline: Stable regime (2022-03-01 to 2026-02-28). Standard errors: clustered by trading day.
 
-Standard errors: clustered by trading day.
+**Specification 1B — Downstream Consumers vs. Clean Defensives (Full Post-Shock Mar–Jul 2026):**
 
-**Specification 1B — Downstream vs Defensives, Extended March–July 2026:**
+Same equation and sample as Spec 1A, but Post-Shock window extended to the full post-shock period (2026-03-01 through 2026-07-31). Standard errors: clustered by trading day.
 
-Same equation and sample as 1A, but Post-Shock window extended to 2026-03-01 through 2026-07-31.
-
-**Specification 2 — Naive Binary DiD (pooled, all sectors):**
+**Specification 1C — Upstream Producers vs. Clean Defensives (Acute March 2026):**
 
 $$
-win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \varepsilon_{i,t}
+win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{Upstream}_i + \beta_3 \cdot (\text{PostShock}_t \times \text{Upstream}_i) + \varepsilon_{i,t}
 $$
 
-Full 480-stock universe (not restricted to Downstream/Defensive). PostShock dummy as defined globally. This is a pooled LPM without a sector treatment indicator. Day-clustered SEs.
+Sample restriction: Upstream Producers and Clean Defensives only. Post-Shock window: Acute March 2026 only (2026-03-01 to 2026-03-31). Pre-period baseline: Stable regime (2022-03-01 to 2026-02-28). Standard errors: clustered by trading day.
+
+**Specification 2 — Naive Binary DiD (Pooled Upstream + Downstream vs. All Other Sectors):**
+
+$$
+win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{Treated}_i + \beta_3 \cdot (\text{PostShock}_t \times \text{Treated}_i) + \varepsilon_{i,t}
+$$
+
+Full 480-stock universe, where `Treated_i = 1` for pooled Upstream Producers + Downstream Consumers, and `0` for all other sectors. Acute March 2026 vs. Stable baseline. Standard errors: clustered by trading day.
 
 **Specification 2A — Pre-Shock Brent Beta Quartile Dummy:**
 
-For each stock, compute its "Brent beta" as the OLS coefficient from regressing the stock's daily win rate (or return) on Brent crude daily log-return during the pre-shock Stable period (2022-03-01 to 2026-02-28). Rank stocks into quartiles by Brent beta. Define `HighBrentBeta_i = 1` for top-quartile stocks.
+For each stock, compute its pre-shock Brent beta from regressing stock daily returns on Brent crude daily log-returns during the pre-shock Stable period (2022-03-01 to 2026-02-28). Rank all 480 stocks into quartiles; define `HighBrentBeta_i = 1` for the top quartile (highest sensitivity). Acute March 2026 vs. Stable baseline across all 480 stocks. Standard errors: clustered by trading day:
 
 $$
 win_{i,t} = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{HighBrentBeta}_i + \beta_3 \cdot (\text{PostShock}_t \times \text{HighBrentBeta}_i) + \varepsilon_{i,t}
 $$
 
-Day-clustered SEs.
+**Specification 3A — Continuous 20-day Brent Realized Volatility × Downstream Interaction:**
 
-**Specification 3A — Continuous Brent Volatility × Downstream Interaction:**
-
-Compute 20-day rolling realized volatility of Brent crude log-returns: σ_Brent,t.
+Compute 20-day rolling realized volatility of Brent crude log-returns: σ_Brent,20d. Downstream Consumers vs. Clean Defensives across the full 2022–2026 sample. Standard errors: clustered by trading day:
 
 $$
-win_{i,t} = \alpha + \beta_1 \cdot \sigma_{\text{Brent},t} + \beta_2 \cdot \text{Downstream}_i + \beta_3 \cdot (\sigma_{\text{Brent},t} \times \text{Downstream}_i) + \varepsilon_{i,t}
+win_{i,t} = \alpha + \beta_1 \cdot \sigma_{\text{Brent},t}^{20d} + \beta_2 \cdot \text{Downstream}_i + \beta_3 \cdot (\sigma_{\text{Brent},t}^{20d} \times \text{Downstream}_i) + \varepsilon_{i,t}
 $$
 
-Full sample (all regimes). Downstream vs Defensive stocks only. Day-clustered SEs.
+**What to report (Table 10):** For each specification — the treatment/interaction coefficient (β₃ in 1A, 1B, 1C, 2, 2A, 3A), day-clustered SE, t-statistic, p-value, resolved trade count N, and number of unique trading days.
 
-**What to report (Table 10):** For each of the 4 specifications — the DiD coefficient (β₃ in 1A, 1B, 2A, 3A; β₁ in Spec 2), SE, t-statistic, p-value, N (resolved trades), and number of trading days.
-
-**What to report (Figure 5):** Time-series plot of daily win rates for Downstream vs Defensive sectors, with the event date marked.
+**What to report (Figure 5):** Time-series plot of 5-day rolling win rates for Downstream Consumers vs Clean Defensives, highlighting the March 2026 divergence.
 
 ---
 
@@ -441,7 +460,9 @@ Report for each stratum: β₁ (PostShock), two-way clustered SE, t-statistic, p
    - `sweet_spot_share`: fraction of resolved trades on that day with gap size in the "sweet spot" bin (researcher defines sweet spot based on Test 6 results)
 4. Drop any day with missing values in any control variable used in the model being estimated.
 
-**5 sequential WLS models (each adds controls to the previous):**
+**6 sequential WLS models:**
+
+To prevent the partial 2025–2026 FII flows file (`fii_dii_cash_2025_to_present.csv`, ~337 trading days) from truncating the 2022–2024 sample (~1,010–1,050 trading days) in full-sample regressions, Models 1–5 are estimated on the full sample without `fii_net`. Model 6 evaluates the 2025–2026 sub-sample where direct FII flows are observed.
 
 **WLS weighting:** `n_resolved` (daily count of resolved trades) as weights throughout.
 
@@ -451,7 +472,7 @@ Report for each stratum: β₁ (PostShock), two-way clustered SE, t-statistic, p
 
 ---
 
-**Model 1 — PostShock only:**
+**Model 1 — PostShock only (Full Sample):**
 
 $$
 WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \varepsilon_t
@@ -459,7 +480,7 @@ $$
 
 ---
 
-**Model 2 — Add VIX and market return:**
+**Model 2 — Add VIX and market return (Full Sample):**
 
 $$
 WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{VIX}_t + \beta_3 \cdot R_{\text{Nifty500},t} + \beta_4 \cdot |R_{\text{Nifty500},t}| + \varepsilon_t
@@ -467,7 +488,7 @@ $$
 
 ---
 
-**Model 3 — Add USD/INR and log-turnover:**
+**Model 3 — Add USD/INR and log-turnover (Full Sample):**
 
 $$
 WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \beta_2 \cdot \text{VIX}_t + \beta_3 \cdot R_{\text{Nifty500},t} + \beta_4 \cdot |R_{\text{Nifty500},t}| + \beta_5 \cdot \Delta \text{USD/INR}_t + \beta_6 \cdot \ln(\text{Turnover}_t) + \varepsilon_t
@@ -475,29 +496,39 @@ $$
 
 ---
 
-**Model 4 — Add FII flow, opening bar range, and sweet-spot share:**
+**Model 4 — Microstructure and Gap Controls (Full Sample):**
 
 $$
-WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \ldots + \beta_7 \cdot \text{FII\_Net}_t + \beta_8 \cdot \overline{\text{Bar0Range}}_t + \beta_9 \cdot \text{SweetSpotShare}_t + \varepsilon_t
+WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \ldots + \beta_7 \cdot \overline{\text{Bar0Range}}_t + \beta_8 \cdot \text{SweetSpotShare}_t + \varepsilon_t
 $$
 
-(The `…` represents the same controls as Model 3.)
+(The `…` represents the same controls as Model 3. `fii_net` is excluded to preserve full 2022–2026 sample continuity.)
 
 ---
 
-**Model 5 — Add Brent volatility and |Brent return|:**
+**Model 5 — Add Energy Volatility Controls (Full Sample):**
 
 $$
-WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \ldots + \beta_{10} \cdot \sigma_{\text{Brent},t}^{20d} + \beta_{11} \cdot |R_{\text{Brent},t}| + \varepsilon_t
+WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \ldots + \beta_9 \cdot \sigma_{\text{Brent},t}^{20d} + \beta_{10} \cdot |R_{\text{Brent},t}| + \varepsilon_t
 $$
 
 (The `…` represents all controls from Model 4.)
 
 ---
 
-**What to report (Table 12):** For each of the 5 models — all coefficient estimates with Newey-West SEs in parentheses, t-statistics, significance stars (∗ p<0.10; ∗∗ p<0.05; ∗∗∗ p<0.01), weighted R², and number of observations N (days with complete data for that model's controls).
+**Model 6 — Direct FII Net Flows (2025–2026 Sub-Sample):**
 
-**What to report (Figure 8):** Coefficient plot of β₁ (PostShock) across the 5 models, showing how the estimate changes as controls are added.
+$$
+WR_t = \alpha + \beta_1 \cdot \text{PostShock}_t + \ldots + \beta_{11} \cdot \text{FII\_Net}_t + \varepsilon_t
+$$
+
+(All controls from Model 5 plus `fii_net`, estimated on the 2025–2026 dates where FII net flows are observed.)
+
+---
+
+**What to report (Table 12):** For each of the 6 models — all coefficient estimates with Newey-West HAC (lag = 5) SEs in parentheses, t-statistics, significance stars (* p<0.10, ** p<0.05, *** p<0.01), weighted R², and number of observations N.
+
+**What to report (Figure 8):** Coefficient plot of β₁ (PostShock) across all 6 models, illustrating the attenuation of the post-shock coefficient as controls are sequentially added.
 
 ---
 
