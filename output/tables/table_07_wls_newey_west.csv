@@ -1,0 +1,4 @@
+HAC Lag,PostShock β₁ (%),Newey-West SE (%),t-Statistic,p-value,Weighted R²,PostShock β₁ (Pre-Stable Controlled),SE (Pre-Controlled),t-Stat (Pre-Controlled),N Observations
+Lag = 5,-7.99%***,1.59%,-5.04,4.6247e-07,0.0518,-8.15%***,1.58%,-5.15,1116
+Lag = 10,-7.99%***,1.84%,-4.34,1.4266e-05,0.0518,-8.15%***,1.84%,-4.43,1116
+Lag = 20,-7.99%***,2.12%,-3.78,1.5890e-04,0.0518,-8.15%***,2.11%,-3.85,1116

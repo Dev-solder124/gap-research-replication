@@ -1,0 +1,9 @@
+Stratum,PostShock Indicator (β₁),Two-Way SE (%),t-Statistic,p-value,N Resolved (Stable),N Resolved (Post-Shock),Number of Symbols
+Full 480 Universe,-8.15%***,1.34%,-6.10,< 0.0001,371850,32587,480
+Nifty 50 Sub-universe,-8.39%***,1.57%,-5.33,< 0.0001,35324,3120,48
+Midcap 50 Sub-universe,-10.40%***,1.93%,-5.39,< 0.0001,36852,3237,49
+Smallcap 50 Sub-universe,-7.45%***,1.84%,-4.04,< 0.0001,37834,3272,48
+Liquidity Q1 (highest),-7.25%***,1.48%,-4.89,< 0.0001,95040,8232,120
+Liquidity Q2,-8.73%***,1.42%,-6.17,< 0.0001,94627,8231,120
+Liquidity Q3,-7.87%***,1.51%,-5.20,< 0.0001,92396,8056,120
+Liquidity Q4 (lowest),-8.83%***,1.46%,-6.04,< 0.0001,89787,8068,120

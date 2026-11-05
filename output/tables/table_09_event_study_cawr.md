@@ -1,0 +1,11 @@
+# Table 9: Event Study — Cumulative Abnormal Win Rate (CAWR)
+
+Cumulative Abnormal Win Rate (CAWR) around the March 4, 2026 structural break event date. Benchmark parameters estimated on 2022-03-15 to 2025-07-31 (N = 837 days): benchmark mean μ = 51.94%, daily volatility σ = 8.77%. Standard errors are computed as SE(CAWR) = σ × √L. Significance: * p < 0.10, ** p < 0.05, *** p < 0.01.
+
+| Window Label | Event-Relative Days | Window Length (L) | CAWR (pp) | Standard Error (pp) | t-Statistic | p-value |
+|:---|:---:|---:|---:|---:|---:|:---:|
+| Pre-event Placebo | [-10, -1] | 10 | +47.97* | 27.74 | 1.73 | 0.0838 |
+| Short post-shock | [+1, +5] | 5 | -52.33*** | 19.62 | -2.67 | 0.0076 |
+| Medium post-shock | [+1, +10] | 10 | -99.70*** | 27.74 | -3.59 | 0.0003 |
+| Long post-shock | [+1, +20] | 20 | -300.16*** | 39.23 | -7.65 | < 0.0001 |
+| Extended post-shock | [+1, +40] | 40 | -458.77*** | 55.48 | -8.27 | < 0.0001 |

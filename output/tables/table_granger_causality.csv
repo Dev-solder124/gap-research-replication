@@ -1,0 +1,21 @@
+Causal Direction,Relationship,Lag Order (L),Granger F-Statistic,p-value
+Signed Brent Return → WR,R_brent → WR,1,0.873,0.3505
+Signed Brent Return → WR,R_brent → WR,3,1.343,0.2590
+Signed Brent Return → WR,R_brent → WR,5,1.309,0.2577
+Signed Brent Return → WR,R_brent → WR,10,1.551,0.1163
+|Brent Return| (Magnitude) → WR,|R_brent| → WR,1,13.363***,0.0003
+|Brent Return| (Magnitude) → WR,|R_brent| → WR,3,8.045***,< 0.0001
+|Brent Return| (Magnitude) → WR,|R_brent| → WR,5,3.815***,0.0020
+|Brent Return| (Magnitude) → WR,|R_brent| → WR,10,1.578,0.1080
+Brent Realized Volatility → WR,σ_Brent(20d) → WR,1,42.834***,< 0.0001
+Brent Realized Volatility → WR,σ_Brent(20d) → WR,3,11.415***,< 0.0001
+Brent Realized Volatility → WR,σ_Brent(20d) → WR,5,4.996***,0.0002
+Brent Realized Volatility → WR,σ_Brent(20d) → WR,10,2.348***,0.0097
+WR → Signed Brent Return (Reverse),WR → R_brent,1,1.430,0.2321
+WR → Signed Brent Return (Reverse),WR → R_brent,3,1.155,0.3258
+WR → Signed Brent Return (Reverse),WR → R_brent,5,2.742**,0.0181
+WR → Signed Brent Return (Reverse),WR → R_brent,10,2.009**,0.0295
+WR → |Brent Return| (Reverse),WR → |R_brent|,1,6.117**,0.0135
+WR → |Brent Return| (Reverse),WR → |R_brent|,3,7.145***,< 0.0001
+WR → |Brent Return| (Reverse),WR → |R_brent|,5,3.954***,0.0015
+WR → |Brent Return| (Reverse),WR → |R_brent|,10,2.319**,0.0107
