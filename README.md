@@ -4,7 +4,7 @@
 
 This repository contains the **raw datasets, econometric test specifications, and complete replication codebase** for the manuscript:
 
-> **"Opening Gap Reversals in Indian Equities: Strategy Persistence, Structural Breaks, and Macro Sensitivities"**
+> **"When Gaps Stop Fading: Oil Supply Shocks and the Breakdown of Mean-Reversion in Indian Equity Markets (2022–2026)"**
 
 Visitors can inspect the raw data in `data/`, review the econometric specifications in `TESTS.md`, and execute the replication pipeline in `src/run_all_tests.py` to regenerate all tables and figures in `output/` from scratch.
 
@@ -56,6 +56,7 @@ gap-trading-raw/
 ├── output/                                      ← generated replication artifacts
 │   ├── tables/                                  ← output tables (Markdown & CSV)
 │   └── figures/                                 ← output figures (300 DPI PNG)
+├── sources/                                     ← external institutional reports & validation sources
 ├── TESTS.md                                     ← econometric test specifications
 ├── DATA_DICTIONARY.md                           ← column-by-column descriptions
 └── README.md
@@ -99,9 +100,9 @@ The strategy traded is a **1:1 risk-reward overnight gap reversal** on Nifty 500
 - **Entry**: At the NSE open (`Open_{i,t}`) at **09:15:00 IST** on day *t*, when the overnight gap meets the gap-zone criterion
 - **Stop-loss**: 1× the gap size (from entry price, against trade direction)
 - **Target**: 1× the gap size (from entry price, with trade direction)
-- **Exit rule**: First of target, stop-loss, or session close (time exit at ~15:29 IST)
+- **Exit rule**: First of target, stop-loss, or intraday time exit at 15:15 IST
 - **Status field**: `TARGET` = win; `STOP_LOSS` = loss; `TIME_EXIT` = unresolved (excluded from win-rate calculations)
-- **Transaction cost grid evaluated**: 8, 10, 12, 15, and 20 basis points (round-trip); see manuscript Section 4.2 and Appendix A
+- **Transaction cost grid evaluated**: 8, 10, 12, 15, and 20 basis points (round-trip); see Appendix A
 - **Regime boundaries**:
   - Pre-stable: before 2022-03-01
   - Stable: 2022-03-01 to 2026-02-28 (inclusive)

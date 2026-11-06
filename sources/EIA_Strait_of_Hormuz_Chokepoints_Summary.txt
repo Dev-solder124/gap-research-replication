@@ -1,0 +1,23 @@
+SOURCE VERIFICATION RECORD: U.S. ENERGY INFORMATION ADMINISTRATION (EIA)
+================================================================================
+Institution: U.S. Energy Information Administration (EIA)
+Parent Body: U.S. Department of Energy, Washington, D.C.
+Topic: World Oil Transit Chokepoints - Strait of Hormuz
+URL: https://www.eia.gov/international/content/analysis/special_topics/World_Oil_Transit_Chokepoints/
+Verified Records & Data:
+1. Physical Transit Volume:
+   - Average flow: 20.5 to 21.0 million barrels per day (b/d).
+   - Share of Global Seaborne Oil Trade: ~27% to 30%.
+   - Share of Global Petroleum Liquids Consumption: ~21%.
+2. Destination Markets:
+   - Asian destinations receive ~82% to 85% of crude and condensate moving through Hormuz.
+   - Primary destinations: China, India, Japan, South Korea.
+3. Liquefied Natural Gas (LNG):
+   - Roughly 20% of global LNG trade transits the Strait of Hormuz (largely Qatar).
+4. Bypass Capabilities:
+   - Very limited bypass pipelines:
+     * Saudi East-West Pipeline (Petroline): capacity ~5.0 million b/d.
+     * UAE Abu Dhabi Crude Oil Pipeline (Habshan-Fujairah): capacity ~1.5 million b/d.
+   - Net unbypassable volume: >14 million b/d (>70% of transit flow) cannot be rerouted overland, making the waterway an absolute physical chokepoint.
+================================================================================
+

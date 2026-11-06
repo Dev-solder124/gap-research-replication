@@ -1,0 +1,45 @@
+SOURCE VERIFICATION RECORD: NATIONAL STOCK EXCHANGE OF INDIA (NSE)
+================================================================================
+Institution: National Stock Exchange of India Limited (NSE India) / NSE Indices Limited
+URL: https://www.nseindia.com/products-services/indices-nifty500-index
+Archive Source: NIFTY_500_Jan2022.pdf (In-repo verified factsheet)
+Verified Records & Data:
+1. Index Universe & Scope:
+   - Index: NIFTY 500
+   - Point-in-time Base Date: January 1, 2022.
+   - Initial Constituents: 500 equities representing ~94% of total free-float market capitalization of listed equities on the NSE.
+2. Delistings, Mergers, and Exclusions (2022-2026):
+   - Exactly 20 constituents delisted, merged, or restructured with discontinued intraday series:
+     1. DHANI (Dhani Services Ltd - corporate restructuring)
+     2. EQUITAS (Equitas Holdings Ltd - merged into Equitas Small Finance Bank)
+     3. FRETAIL (Future Retail Ltd - insolvency / delisted)
+     4. IBREALEST (Indiabulls Real Estate Ltd - restructuring)
+     5. INOXLEISUR (INOX Leisure Ltd - merged into PVR INOX Ltd)
+     6. ISEC (ICICI Securities Ltd - delisted / merged)
+     7. JSLHISAR (Jindal Stainless Hisar Ltd - merged into Jindal Stainless Ltd)
+     8. LTI (Larsen & Toubro Infotech Ltd - merged into LTIMindtree Ltd)
+     9. MINDTREE (Mindtree Ltd - merged into LTIMindtree Ltd)
+     10. PEL (Piramal Enterprises Ltd - demerger / restructuring)
+     11. SHRIRAMCIT (Shriram City Union Finance Ltd - merged into Shriram Finance)
+     12. SUVENPHAR (Suven Pharmaceuticals Ltd - acquisition / restructuring)
+     13. TATACOFFEE (Tata Coffee Ltd - merged into Tata Consumer Products Ltd)
+     14. TATAMTRDVR (Tata Motors DVR - differential voting rights cancellation)
+     15. TCNSBRANDS (TCNS Clothing Co Ltd - acquired / merged)
+     16. TV18BRDCST (TV18 Broadcast Ltd - merged into Network18)
+     17. UJJIVAN (Ujjivan Financial Services Ltd - merged into Ujjivan SFB)
+     18. SPICEJET (SpiceJet Ltd - discontinuous trading / suspended periods)
+     19. HDFC (Housing Development Finance Corporation Ltd - merged into HDFC Bank Ltd)
+     20. TATASTLLP (Tata Steel Long Products Ltd - merged into Tata Steel Ltd)
+     [Plus IDFC Ltd - reverse merger into IDFC FIRST Bank]
+   - Continuous Master Universe: Exactly 480 continuous stocks.
+3. Market Schedule & Ceremonial Muhurat Trading:
+   - Regular Market Hours: 09:15 to 15:30 IST (continuous daytime trading, 375 minutes).
+   - Diwali Muhurat Trading: 18:00 to 19:00 IST (60-minute festive evening ceremonial window).
+   - Excluded Muhurat Sessions:
+     * October 24, 2022 (Diwali 2022)
+     * November 12, 2023 (Diwali 2023)
+     * November 1, 2024 (Diwali 2024)
+     Total trades excluded: 1,328 trades.
+   - Master Sample Trading Days: T = 1,116 regular sessions; N = 439,037 closed trades.
+================================================================================
+

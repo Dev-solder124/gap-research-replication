@@ -1,0 +1,19 @@
+SOURCE VERIFICATION RECORD: PETROLEUM PLANNING & ANALYSIS CELL (PPAC)
+================================================================================
+Institution: Petroleum Planning & Analysis Cell (PPAC)
+Parent Body: Ministry of Petroleum and Natural Gas, Government of India
+URL: https://ppac.gov.in/
+Portal Access Date: 2026-11-05
+Verified Records & Data:
+1. India Crude Import Dependency:
+   - Domestic Crude Production: ~28-29 MMT / annum
+   - Crude Processing / Consumption: ~260-265 MMT / annum
+   - Import Reliance: 85.6% to 88.2% across 2022-2026.
+2. Middle East / Strait of Hormuz Share:
+   - Imports from Persian Gulf nations (Iraq, Saudi Arabia, UAE, Kuwait, Oman):
+     Account for ~45% to 55% of total Indian crude procurement.
+   - Maritime corridor: 100% of Persian Gulf crude imports pass through the Strait of Hormuz into the Arabian Sea bound for western/southern Indian refining ports (Vadinar, Jamnagar, Mumbai, Mangalore, Kochi).
+3. Impact of Blockade / Geopolitical Escalation:
+   - Escalation of maritime insurance premiums (war risk), diversion around Cape of Good Hope (+14 to 20 days transit), and volume constraints directly impair feedstock flow to Indian refiners.
+================================================================================
+

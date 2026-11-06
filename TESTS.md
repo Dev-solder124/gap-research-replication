@@ -9,7 +9,7 @@ Purge the following three Muhurat Diwali trading sessions before any calculation
 - 2023-11-12
 - 2024-11-01
 
-After purging, the master sample is **1,116 regular trading sessions** spanning January 2022 through May 2026.
+After purging, the master sample is **1,116 regular trading sessions** spanning January 2022 through July 2026.
 
 **Regime boundary definitions (used in multiple tests):**
 
