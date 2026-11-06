@@ -136,6 +136,7 @@ def run_test_10():
         post_se = res.bse['post_shock']
         fig8_data.append({
             'model': m_label,
+            'x_label': f"{m_label}\n(N={len(sub):,})",
             'beta': post_b * 100.0,
             'se': post_se * 100.0,
             'ci_lower': (post_b - 1.96 * post_se) * 100.0,
@@ -212,7 +213,7 @@ def run_test_10():
     )
     plt.axhline(y=0, color='#d62728', linestyle='--', linewidth=1.2, alpha=0.8, label='Zero Effect Threshold')
     
-    plt.xticks(x, df_fig8['model'], fontsize=10)
+    plt.xticks(x, df_fig8['x_label'], fontsize=9.5)
     plt.ylabel('PostShock Effect on Daily Win Rate (pp)', fontsize=11, labelpad=8)
     plt.xlabel('Sequential Macro Control Model', fontsize=11, labelpad=8)
     plt.title('Figure 8: Post-Shock Indicator Attenuation in Macro Horse Race', fontsize=13, fontweight='bold', pad=12)

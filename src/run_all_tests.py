@@ -31,7 +31,7 @@ def main():
     
     stages = [
         ("Test 1: Sample Partition & Descriptive Statistics (Table 3)", run_test_1),
-        ("Test 2: 15-Quarter Walk-Forward OOS Convergence (Table 4, Figure 2)", run_test_2),
+        ("Test 2: 16-Quarter Walk-Forward OOS Convergence (Table 4, Figure 2)", run_test_2),
         ("Test 3: Structural Break Tests (Table 5, Figure 1)", run_test_3),
         ("Test 4: Two-Way Clustered LPM (Table 6)", run_test_4),
         ("Test 5: Daily WLS with Newey-West HAC (Table 7)", run_test_5),

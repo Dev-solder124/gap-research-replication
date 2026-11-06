@@ -108,9 +108,26 @@ def run_test_7():
     # --- 3. Plot Figure 4: CAWR Trajectory with 95% Confidence Bands ---
     window_df = daily[(daily['event_rel_day'] >= -10) & (daily['event_rel_day'] <= 40)].sort_values('event_rel_day').copy()
     
-    # Cumulate from day -10 to +40
-    window_df['cum_days'] = np.arange(1, len(window_df) + 1)
-    window_df['CAWR_path'] = window_df['AWR'].cumsum() * 100.0 # in pp
+    cawr_path = []
+    cum_days_list = []
+    for d in window_df['event_rel_day']:
+        if d < 0:
+            # Pre-event cumulation backward from Day 0 over [d, -1]
+            cawr = daily[(daily['event_rel_day'] >= d) & (daily['event_rel_day'] <= -1)]['AWR'].sum() * 100.0
+            k = abs(d)
+        elif d == 0:
+            # Day 0 reference origin
+            cawr = 0.0
+            k = 0
+        else:
+            # Post-event cumulation forward from Day 0 over [1, d]
+            cawr = daily[(daily['event_rel_day'] >= 1) & (daily['event_rel_day'] <= d)]['AWR'].sum() * 100.0
+            k = d
+        cawr_path.append(cawr)
+        cum_days_list.append(k)
+        
+    window_df['CAWR_path'] = cawr_path
+    window_df['cum_days'] = cum_days_list
     window_df['ci_upper'] = 1.96 * (sigma * 100.0) * np.sqrt(window_df['cum_days'])
     window_df['ci_lower'] = -1.96 * (sigma * 100.0) * np.sqrt(window_df['cum_days'])
     
@@ -124,8 +141,8 @@ def run_test_7():
     ci_up = window_df['ci_upper'].values
     ci_lo = window_df['ci_lower'].values
     
-    plt.plot(days_x, cawr_y, color='#d62728', linewidth=2.2, label='Cumulative Abnormal Win Rate (CAWR, pp)')
-    plt.plot(days_x, ci_up, color='#7f7f7f', linestyle='--', linewidth=1.2, label='95% Confidence Band (±1.96 × σ × √k)')
+    plt.plot(days_x, cawr_y, color='#d62728', linewidth=2.2, label='CAWR (Day 0 origin: cumulated over [d, -1] and [1, d])')
+    plt.plot(days_x, ci_up, color='#7f7f7f', linestyle='--', linewidth=1.2, label='95% Confidence Band (±1.96 × σ × √|k|)')
     plt.plot(days_x, ci_lo, color='#7f7f7f', linestyle='--', linewidth=1.2)
     plt.fill_between(days_x, ci_lo, ci_up, color='#7f7f7f', alpha=0.15)
     
@@ -136,7 +153,7 @@ def run_test_7():
     plt.xlabel('Event-Relative Trading Days (Day 0 = 2026-03-04)', fontsize=11, labelpad=8)
     plt.ylabel('CAWR (Percentage Points)', fontsize=11, labelpad=8)
     plt.xticks(np.arange(-10, 45, 5), fontsize=10)
-    plt.legend(frameon=True, loc='lower left', fontsize=10)
+    plt.legend(frameon=True, loc='lower left', fontsize=9.5)
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300)
     plt.close()

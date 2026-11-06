@@ -228,7 +228,15 @@ def run_test_8():
         f.write('\n'.join(md_lines))
     print(f"Table 10 saved to {csv_path} and {md_path}")
 
-    # Plot Figure 5: Downstream vs Upstream vs Defensive Daily Win Rates
+    # Plot Figure 5: 2-Panel Figure (Panel A: Focused Trajectories, Panel B: Cross-Sectional Contraction)
+    import matplotlib.patches as mpatches
+
+    fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_05_sector_did_trajectories.png')
+    
+    plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), dpi=300)
+    
+    # --- Panel A: Focused Trajectory Window (2025-06-01 through 2026-07-10) ---
     down_daily = trades[trades['is_downstream']].groupby('date')['is_win'].mean() * 100.0
     up_daily = trades[trades['is_upstream']].groupby('date')['is_win'].mean() * 100.0
     def_daily = trades[trades['is_defensive']].groupby('date')['is_win'].mean() * 100.0
@@ -241,22 +249,74 @@ def run_test_8():
     plot_df['Upstream_20d'] = plot_df['Upstream'].rolling(20).mean()
     plot_df['Defensive_20d'] = plot_df['Defensive'].rolling(20).mean()
     
-    fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_05_sector_did_trajectories.png')
+    sub_traj = plot_df[(plot_df['date_dt'] >= '2025-06-01') & (plot_df['date_dt'] <= '2026-07-10')].copy()
     
-    plt.figure(figsize=(11, 5.5), dpi=300)
-    plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    ax1.plot(sub_traj['date_dt'], sub_traj['Downstream_20d'], color='#d62728', linewidth=2.0, label='Downstream Consumers (20-Day MA)')
+    ax1.plot(sub_traj['date_dt'], sub_traj['Upstream_20d'], color='#ff7f0e', linewidth=1.8, linestyle='--', label='Upstream Producers (20-Day MA)')
+    ax1.plot(sub_traj['date_dt'], sub_traj['Defensive_20d'], color='#1f77b4', linewidth=2.0, label='Clean Defensives (20-Day MA)')
     
-    plt.plot(plot_df['date_dt'], plot_df['Downstream_20d'], color='#d62728', linewidth=2.0, label='Downstream Consumers (20-Day MA)')
-    plt.plot(plot_df['date_dt'], plot_df['Upstream_20d'], color='#ff7f0e', linewidth=1.8, linestyle='--', label='Upstream Producers (20-Day MA)')
-    plt.plot(plot_df['date_dt'], plot_df['Defensive_20d'], color='#1f77b4', linewidth=2.0, label='Clean Defensives (20-Day MA)')
+    ax1.axvline(x=pd.to_datetime('2026-03-04'), color='#2ca02c', linestyle=':', linewidth=1.8, label='Event Date (2026-03-04)')
+    ax1.axhline(y=50.0, color='#333333', linestyle='--', linewidth=1.0, alpha=0.7, label='50% Breakeven Barrier')
     
-    plt.axvline(x=pd.to_datetime('2026-03-04'), color='#2ca02c', linestyle=':', linewidth=1.8, label='Event Date (2026-03-04)')
-    plt.axhline(y=50.0, color='#333333', linestyle='--', linewidth=1.0, alpha=0.7, label='50% Breakeven Barrier')
+    ax1.set_title('Panel A: Focused Sector Trajectories Around Regime Transition (20-Day Moving Average)', fontsize=11.5, fontweight='bold', pad=8)
+    ax1.set_xlabel('Calendar Date', fontsize=10, labelpad=6)
+    ax1.set_ylabel('Resolved Win Rate (%)', fontsize=10, labelpad=6)
+    ax1.legend(frameon=True, loc='lower left', fontsize=8.5)
     
-    plt.title('Figure 5: Daily Win Rates for Downstream, Upstream, and Defensive Sectors', fontsize=13, fontweight='bold', pad=12)
-    plt.xlabel('Calendar Date', fontsize=11, labelpad=8)
-    plt.ylabel('Resolved Win Rate (%, 20-Day Moving Average)', fontsize=11, labelpad=8)
-    plt.legend(frameon=True, loc='lower left', fontsize=9.5)
+    # --- Panel B: Cross-Sectional Sector Contraction (Acute March 2026 vs. Stable Baseline) ---
+    sector_counts = trades.groupby('sector')['is_win'].count()
+    valid_sectors = sector_counts[sector_counts >= 1000].index.tolist()
+    
+    sec_records = []
+    for sec in valid_sectors:
+        sub_sec = trades[trades['sector'] == sec]
+        s_trades = sub_sec[sub_sec['regime'] == 'stable']
+        m_trades = sub_sec[sub_sec['date'].str.startswith('2026-03')]
+        
+        wr_s = s_trades['is_win'].mean() * 100.0 if len(s_trades) > 0 else np.nan
+        wr_m = m_trades['is_win'].mean() * 100.0 if len(m_trades) > 0 else np.nan
+        delta_wr = wr_m - wr_s
+        
+        if sec in downstream_target:
+            grp = 'Downstream Consumers'
+            color = '#d62728'
+        elif sec in upstream_target:
+            grp = 'Upstream Producers'
+            color = '#ff7f0e'
+        elif sec in defensive_target:
+            grp = 'Clean Defensives'
+            color = '#1f77b4'
+        else:
+            grp = 'Other Sectors'
+            color = '#7f7f7f'
+            
+        sec_records.append({
+            'sector': sec,
+            'group': grp,
+            'color': color,
+            'delta_wr': delta_wr,
+            'n_total': len(sub_sec)
+        })
+        
+    df_sec = pd.DataFrame(sec_records).sort_values('delta_wr').reset_index(drop=True)
+    
+    y_pos = np.arange(len(df_sec))
+    ax2.barh(y_pos, df_sec['delta_wr'], color=df_sec['color'], alpha=0.85, height=0.7)
+    ax2.axvline(x=0.0, color='#333333', linestyle='-', linewidth=0.8)
+    ax2.set_yticks(y_pos)
+    ax2.set_yticklabels(df_sec['sector'], fontsize=8)
+    ax2.set_xlabel('Change in Resolved Win Rate (Acute March 2026 minus Stable Baseline, pp)', fontsize=10, labelpad=6)
+    ax2.set_ylabel('Sector (N ≥ 1,000)', fontsize=10, labelpad=6)
+    ax2.set_title('Panel B: Cross-Sectional Sector Win Rate Contraction', fontsize=11.5, fontweight='bold', pad=8)
+    
+    legend_elements = [
+        mpatches.Patch(color='#d62728', label='Downstream Consumers'),
+        mpatches.Patch(color='#ff7f0e', label='Upstream Producers'),
+        mpatches.Patch(color='#1f77b4', label='Clean Defensives'),
+        mpatches.Patch(color='#7f7f7f', label='Other Sectors')
+    ]
+    ax2.legend(handles=legend_elements, loc='lower right', fontsize=8.5, frameon=True)
+    
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300)
     plt.close()

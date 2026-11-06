@@ -51,7 +51,7 @@ For each of Pre-stable, Stable, Post-shock, and Full Sample:
 
 ---
 
-## Test 2: 15-Quarter Walk-Forward OOS Threshold Convergence
+## Test 2: 16-Quarter Walk-Forward OOS Threshold Convergence
 
 **Manuscript reference:** Table 4, Figure 2, Section 3.5
 
@@ -64,9 +64,9 @@ For each of Pre-stable, Stable, Post-shock, and Full Sample:
 
 **Algorithm — expanding-window walk-forward with quarterly OOS:**
 
-The sample is partitioned into 15 out-of-sample (OOS) quarters, each of approximately 60–65 trading days. The walk-forward proceeds as follows:
+The sample is partitioned into 16 out-of-sample (OOS) quarters, each of approximately 60–65 trading days (Q3 2022 through Q2 2026). The walk-forward proceeds as follows:
 
-For OOS quarter k (k = 1 to 15):
+For OOS quarter k (k = 1 to 16):
 1. **Training window**: all trades from the start of the full sample through the last day before OOS quarter k begins.
 2. **Threshold estimation on training window (First-Crossing Breakeven Cutoff)**:
    - Per methodology, the threshold estimator c*(k) is defined as the non-parametric first-crossing cutoff of the 50.0% directional breakeven barrier, not an unconstrained tail argmax.
@@ -82,13 +82,15 @@ $$
    - If the first valid bin already has wr_0 ≥ 0.50, set c*(k) = m_0. If no bin crosses 0.50, record c*(k) as missing (NaN).
 3. **OOS evaluation**:
    - Apply filter `gap_size_pct ≥ c*(k)` to trades in OOS quarter k.
-   - Report unfiltered OOS win rate, filtered OOS win rate, filtered trade count, and whether the filtered OOS win rate exceeds 50.0% (for both Nominal and Resolved win rates).
+   - Report unfiltered OOS win rate, filtered OOS win rate, filtered trade count, and whether the filtered OOS win rate exceeds 50.0% separately for both Resolved and Nominal win rates.
 
 **Gap size in percent**: Compute `gap_size_pct = gap_size / entry_price × 100`.
 
-**What to report (Table 4):** For each of the 15 OOS quarters — the OOS quarter label (e.g., Q3 2022, Q4 2022 … Q1 2026), the estimated threshold c*(k), unfiltered and filtered trade counts, unfiltered and filtered win rates (both Nominal and Resolved), and the fade-dominant breakeven indicators.
+**What to report (Table 4):** For each of the 16 OOS quarters — the OOS quarter label (e.g., Q3 2022, Q4 2022 … Q2 2026), the estimated threshold c*(k), unfiltered and filtered trade counts, unfiltered and filtered win rates (both Nominal and Resolved), and the two separate fade-dominant breakeven indicators (`Fade-Dominant Resolved (>50%)` and `Fade-Dominant Nominal (>50%)`).
 
-**What to report (Figure 2):** A time-series line chart of c*(k) over the 15 OOS quarters, demonstrating threshold stability and convergence.
+**What to report (Figure 2):** A 2-panel stacked figure (`figsize=(11, 7.5)`, `sharex=True`):
+- **Panel A (Top)**: Grouped bar chart showing OOS Filtered Resolved Win Rate (%) and OOS Filtered Nominal Win Rate (%) for each of the 16 OOS quarters against the 50.0% directional breakeven barrier.
+- **Panel B (Bottom)**: Line plot with markers showing the expanding-window First-Crossing Cutoff c*(k) (%) estimated strictly on training data prior to each quarter k, demonstrating threshold stability and convergence.
 
 ---
 
@@ -121,10 +123,11 @@ $$
 - Report: the number of breaks selected by the BIC, the estimated break dates, and the 95% confidence intervals around each break date.
 - Reference: Bai and Perron (1998, 2003). Implementation in R package `strucchange` or Python via rolling Chow tests.
 
-**Rolling Chow test for Figure 1:**
-- Compute rolling Chow F-statistics across all interior dates (5% trimmed) using a window of at least 60 observations on each side.
-- Plot the F-statistic series against calendar time.
-- Superimpose the 5% critical value as a horizontal line.
+**Quandt–Andrews HAC F-Statistic Sequence for Figure 1:**
+- Plot the full-sample Quandt–Andrews HAC F-statistic sequence across all 5%-trimmed interior candidate break dates against calendar time.
+- Superimpose horizontal reference lines for the Andrews (1993) / Hansen (1997) asymptotic critical values at 5% (F = 8.85) and 1% (F = 12.35).
+- Plot a vertical line at the peak Sup-F date and dynamically annotate the peak Sup-F value and date.
+- Shade the 95% Bai–Perron HAC confidence interval around the final break date (`axvspan` with alpha = 0.20).
 
 **What to report (Table 5):** Test statistics and p-values for Sup-F, Exp-F, Ave-F; number of breaks and break dates from Bai-Perron; confidence intervals on break dates.
 
@@ -250,7 +253,7 @@ Estimate this model separately for:
 
 **What to report (Table 8):** For each of the 10 bins — Stable and Post-Shock sample sizes, Stable and Post-Shock win rates for both Resolved and Nominal definitions, day-clustered differences (Δ), day-clustered standard errors, t-statistics, and two-sided p-values.
 
-**What to report (Figure 3):** Bar chart of win rates by bin, with Stable and Post-shock plotted side by side.
+**What to report (Figure 3):** 2-panel stacked bar chart (`figsize=(12, 8.5)`, `sharex=True`) showing Stable vs. Post-Shock win rates across the 10 gap-size bins with day-clustered 95% confidence interval error bars (`yerr = 1.96 * se`, `capsize=3`) and a horizontal dashed line at 50.0% (Panel A: Resolved Win Rate; Panel B: Nominal Win Rate).
 
 ---
 
@@ -311,7 +314,7 @@ $$
 
 **What to report (Table 9):** For each window — CAWR in percentage points, SE, t-statistic, and p-value. Report the pre-event window as a placebo/validation check.
 
-**What to report (Figure 4):** Line chart of cumulative daily AWR from day −10 to day +40 around the event date, with 95% confidence bands (±1.96 × σ × √k where k is the number of cumulated days).
+**What to report (Figure 4):** Line chart of Cumulative Abnormal Win Rate (CAWR, in percentage points) from day −10 to day +40 around the event date using Day 0 as the 0.0 reference origin (cumulated outward from Day 0 over [d, −1] for pre-event days and [1, d] for post-event days), with 95% confidence bands (±1.96 × σ × √|k| where k is the number of cumulated days), matching Table 9 exactly at Days −10, +5, +10, +20, and +40.
 
 ---
 
@@ -379,7 +382,7 @@ $$
 
 **What to report (Table 10):** For each specification — the treatment/interaction coefficient (β₃ in 1A, 1B, 1C, 2, 2A, 3A), day-clustered SE, t-statistic, p-value, resolved trade count N, and number of unique trading days.
 
-**What to report (Figure 5):** Time-series plot of 5-day rolling win rates for Downstream Consumers vs Clean Defensives, highlighting the March 2026 divergence.
+**What to report (Figure 5):** 2-panel figure (`figsize=(12, 8)`): Panel A shows focused 20-day moving averages of daily resolved win rates for Downstream Consumers, Upstream Producers, and Clean Defensives over 2025-06-01 through 2026-07-10 with the March 4, 2026 structural break line; Panel B shows a sorted horizontal bar chart of the cross-sectional win rate contraction (Acute March 2026 minus Stable baseline, in percentage points) across sectors with N ≥ 1,000 resolved trades, color-coded by industry group.
 
 ---
 
@@ -528,7 +531,7 @@ $$
 
 **What to report (Table 12):** For each of the 6 models — all coefficient estimates with Newey-West HAC (lag = 5) SEs in parentheses, t-statistics, significance stars (* p<0.10, ** p<0.05, *** p<0.01), weighted R², and number of observations N.
 
-**What to report (Figure 8):** Coefficient plot of β₁ (PostShock) across all 6 models, illustrating the attenuation of the post-shock coefficient as controls are sequentially added.
+**What to report (Figure 8):** Coefficient plot of β₁ (PostShock) with 95% Newey-West HAC confidence intervals across all 6 models, where each x-axis label dynamically displays the model name and its exact sample size N (e.g., `Model 1\n(N=1,116)` vs. `Model 6\n(N=332)`), illustrating the attenuation of the post-shock coefficient as controls are sequentially added.
 
 ---
 

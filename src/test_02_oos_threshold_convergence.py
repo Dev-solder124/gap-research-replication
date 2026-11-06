@@ -1,5 +1,5 @@
 """
-Test 2: 15-Quarter Walk-Forward OOS Threshold Convergence
+Test 2: 16-Quarter Walk-Forward OOS Threshold Convergence
 First-Crossing Breakeven Estimator
 Manuscript Reference: Table 4, Figure 2, Section 3.5
 """
@@ -54,7 +54,7 @@ def estimate_first_crossing_threshold(train_df, bin_edges, bin_midpoints, min_tr
     return np.nan
 
 def run_test_2():
-    print("Running Test 2: 15-Quarter Walk-Forward OOS Threshold Convergence (Table 4, Figure 2)...")
+    print("Running Test 2: 16-Quarter Walk-Forward OOS Threshold Convergence (Table 4, Figure 2)...")
     trades = load_trades_clean(resolved_only=False)
     trades['date'] = pd.to_datetime(trades['date'])
 
@@ -63,7 +63,7 @@ def run_test_2():
         '2023Q1', '2023Q2', '2023Q3', '2023Q4',
         '2024Q1', '2024Q2', '2024Q3', '2024Q4',
         '2025Q1', '2025Q2', '2025Q3', '2025Q4',
-        '2026Q1'
+        '2026Q1', '2026Q2'
     ]
 
     bin_edges = np.linspace(0.0, 5.0, 21)
@@ -96,13 +96,15 @@ def run_test_2():
             fil_res_n = len(fil_res)
             fil_res_wr = (fil_res['status'] == 'TARGET').mean() if fil_res_n > 0 else np.nan
             fil_nom_wr = (fil_oos['status'] == 'TARGET').mean() if fil_tot > 0 else np.nan
-            fade_dominant = "Yes" if (not np.isnan(fil_res_wr) and fil_res_wr > 0.50) else "No"
+            fade_dominant_res = "Yes" if (not np.isnan(fil_res_wr) and fil_res_wr > 0.50) else "No"
+            fade_dominant_nom = "Yes" if (not np.isnan(fil_nom_wr) and fil_nom_wr > 0.50) else "No"
         else:
             fil_tot = 0
             fil_res_n = 0
             fil_res_wr = np.nan
             fil_nom_wr = np.nan
-            fade_dominant = "No"
+            fade_dominant_res = "No"
+            fade_dominant_nom = "No"
 
         q_name = f"{q_label[4:]} {q_label[:4]}"
         
@@ -118,7 +120,8 @@ def run_test_2():
             'OOS Filtered Resolved Trades': fil_res_n,
             'OOS Filtered Resolved WR (%)': round(fil_res_wr * 100.0, 2) if not np.isnan(fil_res_wr) else np.nan,
             'OOS Filtered Nominal WR (%)': round(fil_nom_wr * 100.0, 2) if not np.isnan(fil_nom_wr) else np.nan,
-            'Fade-Dominant (>50% WR)': fade_dominant
+            'Fade-Dominant Resolved (>50%)': fade_dominant_res,
+            'Fade-Dominant Nominal (>50%)': fade_dominant_nom
         })
 
     df_table4 = pd.DataFrame(records)
@@ -133,20 +136,20 @@ def run_test_2():
     # Generate Markdown Table
     md_path = os.path.join(BASE_DIR, 'output', 'tables', 'table_04_oos_threshold_convergence.md')
     md_content = [
-        "# Table 4: 15-Quarter Walk-Forward OOS Threshold Convergence",
+        "# Table 4: 16-Quarter Walk-Forward OOS Threshold Convergence",
         "",
-        "First-crossing breakeven threshold estimator c*(k) across 15 out-of-sample quarters (Q3 2022 to Q1 2026). "
+        "First-crossing breakeven threshold estimator c*(k) across 16 out-of-sample quarters (Q3 2022 to Q2 2026). "
         "Estimated via linear interpolation between adjacent 0.25% bins at the 50.0% resolved win-rate barrier on the expanding training window. "
         "Both Resolved Win Rate (TARGET / (TARGET + STOP_LOSS)) and Nominal Win Rate (TARGET / ALL) are reported.",
         "",
-        "| Quarter | In-Sample Resolved | Cutoff c*(k) (%) | OOS Filtered Resolved | OOS Filtered Resolved WR (%) | OOS Filtered Nominal WR (%) | Fade-Dominant (>50%) |",
-        "|:---|---:|---:|---:|---:|---:|:---:|"
+        "| Quarter | In-Sample Resolved | Cutoff c*(k) (%) | OOS Filtered Resolved | OOS Filtered Resolved WR (%) | OOS Filtered Nominal WR (%) | Fade-Dominant Resolved (>50%) | Fade-Dominant Nominal (>50%) |",
+        "|:---|---:|---:|---:|---:|---:|:---:|:---:|"
     ]
     for _, r in df_table4.iterrows():
         md_content.append(
             f"| {r['Quarter']} | {r['In-Sample Resolved Trades']:,} | {r['First-Crossing Cutoff c*(k) (%)']:.3f}% | "
             f"{r['OOS Filtered Resolved Trades']:,} | {r['OOS Filtered Resolved WR (%)']:.2f}% | "
-            f"{r['OOS Filtered Nominal WR (%)']:.2f}% | {r['Fade-Dominant (>50% WR)']} |"
+            f"{r['OOS Filtered Nominal WR (%)']:.2f}% | {r['Fade-Dominant Resolved (>50%)']} | {r['Fade-Dominant Nominal (>50%)']} |"
         )
     md_content.append("")
     
@@ -154,33 +157,48 @@ def run_test_2():
         f.write('\n'.join(md_content))
     print(f"Table 4 saved to {csv_path} and {md_path}")
 
-    # Plot Figure 2: Time-series line chart of c*(k)
+    # Plot Figure 2: 2-Panel Stacked Figure (Top: WRs, Bottom: Cutoff)
     fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_02_oos_threshold_convergence.png')
     
-    plt.figure(figsize=(10, 5), dpi=300)
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7.5), sharex=True, dpi=300)
     
-    x_indices = list(range(len(df_table4)))
-    c_vals = df_table4['First-Crossing Cutoff c*(k) (%)'].values
+    x = np.arange(len(df_table4))
+    width = 0.35
     quarter_labels = df_table4['Quarter'].values
     
-    plt.plot(x_indices, c_vals, marker='o', color='#1f77b4', linewidth=2.2, markersize=7, label='First-Crossing Breakeven Threshold c*(k)')
+    # --- Top Panel (Panel A): Grouped Bar Chart of Win Rates ---
+    res_wr = df_table4['OOS Filtered Resolved WR (%)'].values
+    nom_wr = df_table4['OOS Filtered Nominal WR (%)'].values
     
-    # Convergence reference line around ~0.37%
-    mean_stable_c = np.mean(c_vals[4:]) # from 2023Q3 onward
-    plt.axhline(y=mean_stable_c, color='#d62728', linestyle='--', alpha=0.7, label=f'Convergence Level (~{mean_stable_c:.2f}%)')
+    ax1.bar(x - width/2, res_wr, width, label='OOS Filtered Resolved WR (%)', color='#1f77b4', alpha=0.9)
+    ax1.bar(x + width/2, nom_wr, width, label='OOS Filtered Nominal WR (%)', color='#2ca02c', alpha=0.9)
+    ax1.axhline(y=50.0, color='#d62728', linestyle='--', linewidth=1.5, label='50.0% Breakeven Barrier')
     
-    plt.title('Figure 2: Walk-Forward OOS First-Crossing Breakeven Threshold Convergence', fontsize=13, fontweight='bold', pad=12)
-    plt.xlabel('Out-of-Sample Quarter', fontsize=11, labelpad=8)
-    plt.ylabel('Breakeven Cutoff c* (%)', fontsize=11, labelpad=8)
-    plt.xticks(x_indices, quarter_labels, rotation=45, ha='right', fontsize=9)
-    plt.yticks(np.arange(0.2, 0.8, 0.1), fontsize=10)
-    plt.ylim(0.25, 0.75)
+    ax1.set_ylabel('Win Rate (%)', fontsize=11, labelpad=8)
+    ax1.set_title('Panel A: Out-of-Sample Filtered Win Rates Across 16 Quarters', fontsize=12, fontweight='bold', pad=8)
+    ax1.legend(frameon=True, loc='lower right', fontsize=9.5)
+    ax1.set_ylim(35, 75)
+    
+    # --- Bottom Panel (Panel B): Cutoff c*(k) ---
+    c_vals = df_table4['First-Crossing Cutoff c*(k) (%)'].values
+    ax2.plot(x, c_vals, marker='o', color='#1f77b4', linewidth=2.2, markersize=7, label='First-Crossing Breakeven Threshold c*(k)')
+    
+    mean_stable_c = np.mean(c_vals[4:])  # from 2023Q3 onward
+    ax2.axhline(y=mean_stable_c, color='#d62728', linestyle='--', alpha=0.7, label=f'Convergence Level (~{mean_stable_c:.2f}%)')
+    
+    ax2.set_title('Panel B: Expanding-Window First-Crossing Cutoff c*(k)', fontsize=12, fontweight='bold', pad=8)
+    ax2.set_xlabel('Out-of-Sample Quarter', fontsize=11, labelpad=8)
+    ax2.set_ylabel('Breakeven Cutoff c* (%)', fontsize=11, labelpad=8)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(quarter_labels, rotation=45, ha='right', fontsize=9.5)
+    ax2.set_ylim(0.25, 0.75)
     
     for i, txt in enumerate(c_vals):
-        plt.annotate(f"{txt:.2f}%", (x_indices[i], c_vals[i] + 0.025), fontsize=8, ha='center', color='#333333')
+        ax2.annotate(f"{txt:.2f}%", (x[i], c_vals[i] + 0.025), fontsize=8, ha='center', color='#333333')
         
-    plt.legend(frameon=True, loc='upper right', fontsize=10)
+    ax2.legend(frameon=True, loc='upper right', fontsize=9.5)
+    
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300)
     plt.close()
@@ -190,3 +208,4 @@ def run_test_2():
 
 if __name__ == '__main__':
     run_test_2()
+

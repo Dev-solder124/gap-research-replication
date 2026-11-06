@@ -60,6 +60,38 @@ def run_test_6():
         res_wr_stable = b_res[b_res['regime'] == 'stable']['win_resolved'].mean() if n_stable_res > 0 else np.nan
         res_wr_post = b_res[b_res['regime'] == 'post_shock']['win_resolved'].mean() if n_post_res > 0 else np.nan
         
+        # Day-clustered SE for Stable Resolved WR
+        b_res_s = b_res[b_res['regime'] == 'stable']
+        if len(b_res_s) > 0:
+            m_s_res = sm.OLS(b_res_s['win_resolved'], np.ones(len(b_res_s))).fit(cov_type='cluster', cov_kwds={'groups': b_res_s['date']})
+            se_res_s = m_s_res.bse.iloc[0]
+        else:
+            se_res_s = 0.0
+
+        # Day-clustered SE for Post-Shock Resolved WR
+        b_res_p = b_res[b_res['regime'] == 'post_shock']
+        if len(b_res_p) > 0:
+            m_p_res = sm.OLS(b_res_p['win_resolved'], np.ones(len(b_res_p))).fit(cov_type='cluster', cov_kwds={'groups': b_res_p['date']})
+            se_res_p = m_p_res.bse.iloc[0]
+        else:
+            se_res_p = 0.0
+
+        # Day-clustered SE for Stable Nominal WR
+        b_all_s = b_all[b_all['regime'] == 'stable']
+        if len(b_all_s) > 0:
+            m_s_nom = sm.OLS(b_all_s['win_nominal'], np.ones(len(b_all_s))).fit(cov_type='cluster', cov_kwds={'groups': b_all_s['date']})
+            se_nom_s = m_s_nom.bse.iloc[0]
+        else:
+            se_nom_s = 0.0
+
+        # Day-clustered SE for Post-Shock Nominal WR
+        b_all_p = b_all[b_all['regime'] == 'post_shock']
+        if len(b_all_p) > 0:
+            m_p_nom = sm.OLS(b_all_p['win_nominal'], np.ones(len(b_all_p))).fit(cov_type='cluster', cov_kwds={'groups': b_all_p['date']})
+            se_nom_p = m_p_nom.bse.iloc[0]
+        else:
+            se_nom_p = 0.0
+
         # Day-clustered LPM for Resolved Win Rate:
         # win_resolved = alpha + beta * post_shock + e, clustered by date
         X_res = sm.add_constant(b_res['post_shock'])
@@ -102,9 +134,13 @@ def run_test_6():
         plot_data.append({
             'bin': b,
             'res_s': res_wr_stable * 100.0,
+            'res_s_se': se_res_s * 100.0,
             'res_p': res_wr_post * 100.0,
+            'res_p_se': se_res_p * 100.0,
             'nom_s': nom_wr_stable * 100.0,
-            'nom_p': nom_wr_post * 100.0
+            'nom_s_se': se_nom_s * 100.0,
+            'nom_p': nom_wr_post * 100.0,
+            'nom_p_se': se_nom_p * 100.0
         })
 
     df_table8 = pd.DataFrame(records)
@@ -141,28 +177,53 @@ def run_test_6():
         f.write('\n'.join(md_lines))
     print(f"Table 8 saved to {csv_path} and {md_path}")
 
-    # Plot Figure 3: Side-by-Side Bar Chart for Resolved Win Rates
+    # Plot Figure 3: 2-Panel Stacked Bar Chart (Panel A: Resolved WR, Panel B: Nominal WR)
     df_plot = pd.DataFrame(plot_data)
     fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_03_gap_size_bins.png')
     
-    plt.figure(figsize=(11, 5.5), dpi=300)
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8.5), sharex=True, dpi=300)
     
     x = np.arange(len(df_plot))
     width = 0.38
     
-    plt.bar(x - width/2, df_plot['res_s'], width, label='Stable Regime: Resolved WR', color='#1f77b4', alpha=0.9)
-    plt.bar(x + width/2, df_plot['res_p'], width, label='Post-Shock Regime: Resolved WR', color='#d62728', alpha=0.9)
+    # --- Panel A: Resolved Win Rates with Day-Clustered 95% CI ---
+    ax1.bar(
+        x - width/2, df_plot['res_s'], width, 
+        yerr=1.96 * df_plot['res_s_se'], capsize=3, 
+        label='Stable Regime: Resolved WR', color='#1f77b4', alpha=0.9
+    )
+    ax1.bar(
+        x + width/2, df_plot['res_p'], width, 
+        yerr=1.96 * df_plot['res_p_se'], capsize=3, 
+        label='Post-Shock Regime: Resolved WR', color='#d62728', alpha=0.9
+    )
+    ax1.axhline(y=50.0, color='#555555', linestyle='--', linewidth=1.2, alpha=0.7, label='50.0% Breakeven Barrier')
+    ax1.set_ylabel('Resolved Win Rate (%)', fontsize=11, labelpad=8)
+    ax1.set_title('Panel A: Resolved Win Rate by Gap-Size Bin (Day-Clustered 95% CI)', fontsize=12, fontweight='bold', pad=8)
+    ax1.legend(frameon=True, loc='upper left', fontsize=9.5)
+    ax1.set_ylim(15, 80)
     
-    plt.axhline(y=50.0, color='#555555', linestyle='--', linewidth=1.2, alpha=0.7, label='50% Breakeven Barrier')
+    # --- Panel B: Nominal Win Rates with Day-Clustered 95% CI ---
+    ax2.bar(
+        x - width/2, df_plot['nom_s'], width, 
+        yerr=1.96 * df_plot['nom_s_se'], capsize=3, 
+        label='Stable Regime: Nominal WR', color='#1f77b4', alpha=0.9
+    )
+    ax2.bar(
+        x + width/2, df_plot['nom_p'], width, 
+        yerr=1.96 * df_plot['nom_p_se'], capsize=3, 
+        label='Post-Shock Regime: Nominal WR', color='#d62728', alpha=0.9
+    )
+    ax2.axhline(y=50.0, color='#555555', linestyle='--', linewidth=1.2, alpha=0.7, label='50.0% Breakeven Barrier')
+    ax2.set_ylabel('Nominal Win Rate (%)', fontsize=11, labelpad=8)
+    ax2.set_xlabel('Overnight Gap Size Range (% of Entry Price)', fontsize=11, labelpad=8)
+    ax2.set_title('Panel B: Nominal Win Rate by Gap-Size Bin (Day-Clustered 95% CI)', fontsize=12, fontweight='bold', pad=8)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(df_plot['bin'], rotation=30, ha='right', fontsize=9.5)
+    ax2.legend(frameon=True, loc='upper right', fontsize=9.5)
+    ax2.set_ylim(10, 70)
     
-    plt.title('Figure 3: Resolved Win Rate by Gap-Size Bin Across Regimes (Day-Clustered Inference)', fontsize=13, fontweight='bold', pad=12)
-    plt.xlabel('Overnight Gap Size Range (% of Entry Price)', fontsize=11, labelpad=8)
-    plt.ylabel('Resolved Win Rate (%)', fontsize=11, labelpad=8)
-    plt.xticks(x, df_plot['bin'], rotation=30, ha='right', fontsize=9)
-    plt.yticks(np.arange(20, 75, 10), fontsize=10)
-    plt.ylim(20, 72)
-    plt.legend(frameon=True, loc='upper left', fontsize=10)
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300)
     plt.close()

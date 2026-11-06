@@ -141,6 +141,7 @@ def run_test_3():
         lr_var += 2.0 * weight * cov
 
     conf_intervals = []
+    ci_indices = []
     c_95 = 7.68 # Bai (1997) critical value for symmetric 95% CI
     for i, b in enumerate(selected_breaks):
         mean_left = np.mean(y[seg_starts[i]:seg_ends[i] + 1])
@@ -149,6 +150,7 @@ def run_test_3():
         radius = int(np.ceil(c_95 * (lr_var / (delta ** 2))))
         low_idx = max(0, b + 1 - radius)
         high_idx = min(T - 1, b + 1 + radius)
+        ci_indices.append((low_idx, high_idx))
         conf_intervals.append(f"[{date_strs[low_idx]} to {date_strs[high_idx]}]")
 
     # --- 3. Save Table 5 ---
@@ -183,52 +185,44 @@ def run_test_3():
         f.write('\n'.join(md_lines))
     print(f"Table 5 saved to {csv_path} and {md_path}")
 
-    # --- 4. Plot Figure 1: Rolling Chow F-Statistics ---
-    # Compute rolling Chow F-statistic series across all interior dates with >= 60 obs on left and right
-    w = 60
-    chow_f_vals = []
-    chow_dates = []
-    
-    for tau in range(w, T - w):
-        y_win = y[tau - w : tau + w]
-        ssr_win0 = np.sum((y_win - np.mean(y_win))**2)
-        y1 = y[tau - w : tau]
-        y2 = y[tau : tau + w]
-        ssr_win1 = np.sum((y1 - np.mean(y1))**2)
-        ssr_win2 = np.sum((y2 - np.mean(y2))**2)
-        f_val = ((ssr_win0 - (ssr_win1 + ssr_win2)) / 1.0) / ((ssr_win1 + ssr_win2) / (2 * w - 2))
-        chow_f_vals.append(f_val)
-        chow_dates.append(dates.iloc[tau])
-        
-    chow_f_vals = np.array(chow_f_vals)
-    crit_val_5pct = stats.f.ppf(0.95, dfn=1, dfd=2*w - 2)
-    
+    # --- 4. Plot Figure 1: Quandt–Andrews HAC Structural Break F-Statistic Sequence ---
     fig_path = os.path.join(BASE_DIR, 'output', 'figures', 'figure_01_rolling_chow_structural_break.png')
     
     plt.figure(figsize=(11, 5.5), dpi=300)
     plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
     
-    plt.plot(chow_dates, chow_f_vals, color='#1f77b4', linewidth=1.8, label='Rolling Chow F-Statistic (60-Day Window)')
-    plt.axhline(y=crit_val_5pct, color='#d62728', linestyle='--', linewidth=1.5, label=f'5% Critical Value (F={crit_val_5pct:.2f})')
+    cand_dates = dates.iloc[list(candidate_indices)]
+    plt.plot(cand_dates, f_hac, color='#1f77b4', linewidth=1.8, label='Quandt–Andrews HAC F-Statistic')
     
-    # Mark the March 4, 2026 break date
-    break_dt = pd.to_datetime('2026-03-04')
-    max_chow_val = np.max(chow_f_vals)
-    plt.axvline(x=break_dt, color='#2ca02c', linestyle=':', linewidth=1.8, label='Identified Break Date: 2026-03-04')
+    # Andrews (1993) / Hansen (1997) asymptotic critical values for 5% trimming, 1 parameter
+    plt.axhline(y=8.85, color='#d62728', linestyle='--', linewidth=1.5, label='5% Critical Value (F=8.85)')
+    plt.axhline(y=12.35, color='#8b0000', linestyle=':', linewidth=1.5, label='1% Critical Value (F=12.35)')
+    
+    # Vertical line at peak Sup-F date
+    sup_f_dt = pd.to_datetime(sup_f_date)
+    plt.axvline(x=sup_f_dt, color='#2ca02c', linestyle='-', linewidth=1.8, label=f'Sup-F Peak Date: {sup_f_date}')
+    
+    # Shade the 95% Bai–Perron confidence interval around the final break date
+    last_low_idx, last_high_idx = ci_indices[-1]
+    bp_low_dt = dates.iloc[last_low_idx]
+    bp_high_dt = dates.iloc[last_high_idx]
+    plt.axvspan(bp_low_dt, bp_high_dt, color='#2ca02c', alpha=0.20, label='Bai–Perron 95% HAC CI')
+    
+    # Dynamically annotate the peak Sup-F value and date
     plt.annotate(
-        f'Peak F={max_chow_val:.1f}\n2026-03-04',
-        xy=(break_dt, max_chow_val),
-        xytext=(pd.to_datetime('2025-08-01'), max_chow_val - 5),
+        f'Peak Sup-F = {sup_f:.2f}\n{sup_f_date}',
+        xy=(sup_f_dt, sup_f),
+        xytext=(pd.to_datetime('2025-06-01'), sup_f - 3),
         arrowprops=dict(facecolor='#2ca02c', shrink=0.08, width=1.2, headwidth=6),
         fontsize=10,
         fontweight='bold',
         color='#1b5e20'
     )
     
-    plt.title('Figure 1: Rolling Chow Structural Break Test Across Trading Sessions', fontsize=13, fontweight='bold', pad=12)
+    plt.title('Figure 1: Quandt–Andrews HAC Structural Break F-Statistic Sequence', fontsize=13, fontweight='bold', pad=12)
     plt.xlabel('Calendar Date', fontsize=11, labelpad=8)
-    plt.ylabel('Chow F-Statistic', fontsize=11, labelpad=8)
-    plt.legend(frameon=True, loc='upper left', fontsize=10)
+    plt.ylabel('HAC F-Statistic (Newey–West)', fontsize=11, labelpad=8)
+    plt.legend(frameon=True, loc='upper left', fontsize=9.5)
     plt.tight_layout()
     plt.savefig(fig_path, dpi=300)
     plt.close()

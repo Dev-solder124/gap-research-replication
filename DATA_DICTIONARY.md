@@ -195,11 +195,11 @@ Plain text, one NSE ticker per line. The 20 Nifty 500 constituents that were del
 
 ## data/universe/SECTOR_MAP.py
 
-Python module defining a single dict `SECTOR_MAP: dict[str, str]` mapping each NSE ticker (without suffix) to its GICS-equivalent sector label. Used in Table 10 (sector DiD) to classify stocks as:
+Python module defining a single dict `SECTOR_MAP: dict[str, str]` mapping each NSE ticker (without suffix) to its GICS-equivalent sector label. Used in Table 10 (sector DiD) and Figure 5 to classify stocks into three distinct, mutually exclusive industry groups:
 
-- **Downstream Oil-exposed**: Oil & Gas, Paints (uses refined petroleum inputs), Chemicals (petrochemical feedstock), Transportation/Airlines
-- **Defensive**: FMCG, Healthcare, Pharma, IT
-- Other sectors form the control group in some DiD specifications
+- **Downstream Consumers** (energy/petrochemical input cost sensitive): Auto, Cement, Chemicals, Power, Fertilisers (`{'Auto', 'Automobile', 'Cement', 'Cement & Cement Products', 'Chemicals', 'Power', 'Fertilisers', 'Fertilisers & Pesticides'}`)
+- **Upstream Producers** (crude/commodity revenue beneficiaries): Oil & Gas, Metals (`{'Oil & Gas', 'Metals'}`)
+- **Clean Defensives** (energy price insensitive): FMCG/Consumer Goods, Healthcare, Pharma, IT (`{'FMCG', 'Consumer Goods', 'Healthcare', 'Healthcare Services', 'Pharma', 'IT'}`)
 
-The researcher must define the exact downstream vs defensive classification boundaries; `SECTOR_MAP` provides the raw sector label as the starting point.
+All other sectors form the remaining cross-sectional control group in the DiD specifications. The raw `SECTOR_MAP` dictionary provides the baseline sector classification for each symbol root.
 

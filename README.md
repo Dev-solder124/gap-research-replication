@@ -1,23 +1,12 @@
-# Gap-Trading Raw Materials Repository
+# Gap-Trading Raw Materials & Replication Repository
 
-## What This Repository Is
+## What This Repository Contains
 
-This repository contains **raw datasets and a test specification** for independent replication of the manuscript:
+This repository contains the **raw datasets, econometric test specifications, and complete replication codebase** for the manuscript:
 
 > **"Opening Gap Reversals in Indian Equities: Strategy Persistence, Structural Breaks, and Macro Sensitivities"**
 
-An independent researcher can use the data in `data/` and the specifications in `TESTS.md` to write their own code and reproduce every table and figure in the paper from scratch.
-
----
-
-## What This Repository Is NOT
-
-- There are **no scripts** here.
-- There are **no computed results** here.
-- There are **no figures, scorecard files, or output CSVs** here.
-- There are **no hardcoded numbers** anywhere in this repository.
-
-If you find a `.py`, `.R`, or any file containing numerical results, that is an error.
+Visitors can inspect the raw data in `data/`, review the econometric specifications in `TESTS.md`, and execute the replication pipeline in `src/run_all_tests.py` to regenerate all tables and figures in `output/` from scratch.
 
 ---
 
@@ -50,10 +39,39 @@ gap-trading-raw/
 │       ├── smcap50_symbols.txt
 │       ├── delisted_2022.txt
 │       └── SECTOR_MAP.py                        ← symbol → sector dict
-├── TESTS.md          ← test specifications (no results)
-├── DATA_DICTIONARY.md
+├── src/                                         ← complete replication codebase
+│   ├── data_loader.py                           ← sample cleaning & data loaders
+│   ├── run_all_tests.py                         ← master replication orchestrator
+│   ├── test_01_descriptive_stats.py             ← Table 3
+│   ├── test_02_oos_threshold_convergence.py     ← Table 4, Figure 2
+│   ├── test_03_structural_breaks.py             ← Table 5, Figure 1
+│   ├── test_04_lpm_two_way_cluster.py           ← Table 6
+│   ├── test_05_wls_newey_west.py                ← Table 7
+│   ├── test_06_gap_size_bins.py                 ← Table 8, Figure 3
+│   ├── test_07_event_study_cawr.py              ← Table 9, Figure 4
+│   ├── test_08_sector_did.py                    ← Table 10, Figure 5
+│   ├── test_09_strata_analysis.py               ← Table 11, Figure 7
+│   ├── test_10_macro_horse_race.py              ← Table 12, Figure 8
+│   └── test_11_granger_causality.py             ← Table Granger, Figure 6
+├── output/                                      ← generated replication artifacts
+│   ├── tables/                                  ← output tables (Markdown & CSV)
+│   └── figures/                                 ← output figures (300 DPI PNG)
+├── TESTS.md                                     ← econometric test specifications
+├── DATA_DICTIONARY.md                           ← column-by-column descriptions
 └── README.md
 ```
+
+---
+
+## Replication Execution
+
+To execute the entire replication pipeline sequentially and regenerate all tables and figures from raw data:
+
+```bash
+python src/run_all_tests.py
+```
+
+All 11 replication tests execute end-to-end without hardcoded numbers, validating cross-test sample sizes, day-clustered and HAC standard errors, and exporting 300 DPI figures.
 
 ---
 
